@@ -513,9 +513,104 @@ void Dashboard::paintCounter (juce::Graphics& g, juce::Rectangle<float> area)
 }
 
 //==============================================================================
+AvatarWindow::AvatarWindow (ZaryaProcessor& p) : proc (p)
+{
+    loadButton.onClick = [this]
+    {
+        chooser = std::make_unique<juce::FileChooser> ("Choose avatar image", juce::File(), "*.png;*.jpg;*.jpeg;*.gif");
+        chooser->launchAsync (juce::FileBrowserComponent::openMode | juce::FileBrowserComponent::canSelectFiles,
+                              [this] (const juce::FileChooser& fc) { if (fc.getResult() != juce::File()) loadImage (fc.getResult()); });
+    };
+    addAndMakeVisible (loadButton);
+
+    const juce::File saved (proc.avatarPath);
+    if (proc.avatarPath.isNotEmpty() && saved.existsAsFile()) image = juce::ImageFileFormat::loadFrom (saved);
+    if (! image.isValid()) image = juce::ImageCache::getFromMemory (BinaryData::avatar_png, BinaryData::avatar_pngSize);
+
+    constrainer.setMinimumOnscreenAmounts (0xffffff, 0xffffff, 0xffffff, 0xffffff); // keep fully inside the editor
+    seenNotes = proc.noteOnCount.load();
+    startTimerHz (60);
+}
+
+AvatarWindow::~AvatarWindow() { stopTimer(); }
+
+void AvatarWindow::loadImage (const juce::File& f)
+{
+    auto img = juce::ImageFileFormat::loadFrom (f);
+    if (! img.isValid()) return;
+    image = img;
+    proc.avatarPath = f.getFullPathName();
+    repaint();
+}
+
+void AvatarWindow::resized() { loadButton.setBounds (getWidth() - 58, 6, 50, 26); }
+
+void AvatarWindow::mouseDown (const juce::MouseEvent& e) { dragger.startDraggingComponent (this, e); }
+void AvatarWindow::mouseDrag (const juce::MouseEvent& e) { dragger.dragComponent (this, e, &constrainer); }
+
+void AvatarWindow::timerCallback()
+{
+    const int count = proc.noteOnCount.load (std::memory_order_acquire);
+    if (count != seenNotes)
+    {
+        seenNotes = count;
+        const float vel = juce::jlimit (0.2f, 1.0f, proc.lastVelocity.load (std::memory_order_relaxed));
+        hopVel = 0.75f + 0.6f * vel;                 // jump strength follows velocity
+        squash = 0.25f;
+        xTarget = juce::jlimit (0.0f, 1.0f, (float) (proc.lastNote.load() - 36) / 48.0f); // pitch -> position
+        tilt = (xTarget > xPos ? 1.0f : -1.0f) * 0.12f;
+    }
+    // Simple ballistic hop with gravity and a squash on landing.
+    constexpr float dt = 1.0f / 60.0f;
+    hopVel -= 9.0f * dt;
+    hop += hopVel * dt * 3.0f;
+    if (hop <= 0.0f) { if (hopVel < -0.5f) squash = 0.18f; hop = 0.0f; hopVel = 0.0f; }
+    squash *= 0.85f;
+    tilt *= 0.9f;
+    xPos += (xTarget - xPos) * 0.12f;
+    glow = std::max (proc.outputPeak.load (std::memory_order_relaxed), glow * 0.9f);
+    repaint();
+}
+
+void AvatarWindow::paint (juce::Graphics& g)
+{
+    retro::drawPlate (g, getLocalBounds().toFloat().reduced (1.0f));
+    g.setFont (retro::mono (11.0f));
+    g.setColour (col::engraved);
+    g.drawText ("AVATAR.SYS", getLocalBounds().reduced (12, 0).removeFromTop (38), juce::Justification::centredLeft);
+
+    auto screen = retro::drawScreen (g, getLocalBounds().reduced (10).withTrimmedTop (28).toFloat());
+    // Light "paper" screen so the artwork keeps its original colours; it pulses faintly with the output.
+    g.setColour (juce::Colour (0xffeeeee6).interpolatedWith (juce::Colour (0xffd8ffe6), juce::jlimit (0.0f, 1.0f, glow)));
+    g.fillRoundedRectangle (screen, 3.0f);
+    g.setColour (juce::Colours::black.withAlpha (0.12f));
+    g.drawHorizontalLine ((int) screen.getBottom() - 10, screen.getX() + 4.0f, screen.getRight() - 4.0f);
+
+    if (image.isValid())
+    {
+        const float h = (screen.getHeight() - 10.0f) * 0.9f;
+        const float w = std::min (h * (float) image.getWidth() / (float) image.getHeight(), screen.getWidth() - 8.0f);
+        const float range = std::max (0.0f, screen.getWidth() - w - 8.0f);
+        const float x = screen.getX() + 4.0f + range * xPos;
+        const float baseY = screen.getBottom() - 8.0f;
+        const float lift = hop * std::max (12.0f, screen.getHeight() - h - 10.0f);
+        const float sy = 1.0f - squash, sx = 1.0f + squash * 0.6f;
+
+        g.setColour (juce::Colours::black.withAlpha (0.45f / (1.0f + hop * 3.0f)));
+        g.fillEllipse (x + w * 0.15f, baseY - 4.0f, w * 0.7f, 8.0f);
+
+        const auto t = juce::AffineTransform::scale (w * sx / (float) image.getWidth(), h * sy / (float) image.getHeight())
+                           .translated (x - w * (sx - 1.0f) * 0.5f, baseY - h * sy - lift)
+                           .rotated (tilt, x + w * 0.5f, baseY - lift);
+        g.setOpacity (1.0f); // the shadow colour's alpha would otherwise fade the image
+        g.drawImageTransformed (image, t);
+    }
+}
+
+//==============================================================================
 ZaryaEditor::ZaryaEditor (ZaryaProcessor& p)
     : AudioProcessorEditor (&p), proc (p), dashboard (p),
-      keyboard (p.keyboardState, juce::MidiKeyboardComponent::horizontalKeyboard)
+      keyboard (p.keyboardState, juce::MidiKeyboardComponent::horizontalKeyboard), avatar (p)
 {
     setLookAndFeel (&lnf);
     using SA = juce::StringArray;
@@ -569,6 +664,9 @@ ZaryaEditor::ZaryaEditor (ZaryaProcessor& p)
     keyboard.setKeyWidth (22.0f);
     addAndMakeVisible (keyboard);
 
+    avatar.setSize (250, 300);
+    addAndMakeVisible (avatar); // added last so it floats above everything
+
     setResizable (true, true);
     setResizeLimits (940, 720, 2200, 1600);
     setSize (1140, 900);
@@ -598,4 +696,10 @@ void ZaryaEditor::resized()
     keyboard.setBounds (keyboardPlate.reduced (22, 14));
     r.removeFromBottom (4);
     tabs.setBounds (r);
+
+    // Default spot: bottom-right above the keyboard; afterwards only keep it inside the window.
+    if (avatar.getX() == 0 && avatar.getY() == 0)
+        avatar.setTopLeftPosition (getWidth() - avatar.getWidth() - 24, keyboardPlate.getY() - avatar.getHeight() - 10);
+    avatar.setTopLeftPosition (juce::jlimit (0, std::max (0, getWidth() - avatar.getWidth()), avatar.getX()),
+                               juce::jlimit (0, std::max (0, getHeight() - avatar.getHeight()), avatar.getY()));
 }

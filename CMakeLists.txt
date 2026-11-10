@@ -45,6 +45,8 @@ juce_add_plugin(Zarya
 
 juce_generate_juce_header(Zarya)
 
+juce_add_binary_data(ZaryaAssets SOURCES Resources/avatar.png)
+
 target_sources(Zarya PRIVATE
     Source/PluginProcessor.cpp
     Source/Parameters.cpp
@@ -59,6 +61,7 @@ target_compile_definitions(Zarya PUBLIC
 
 target_link_libraries(Zarya
     PRIVATE
+        ZaryaAssets
         juce::juce_audio_utils
         juce::juce_audio_formats
     PUBLIC

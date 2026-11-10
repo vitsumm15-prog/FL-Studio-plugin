@@ -50,6 +50,11 @@ public:
     std::atomic<int> scopeWrite { 0 };
     std::atomic<float> outputPeak { 0.0f };
 
+    // Note activity for the avatar window.
+    std::atomic<int> noteOnCount { 0 }, lastNote { 60 };
+    std::atomic<float> lastVelocity { 0.0f };
+    juce::String avatarPath; // message thread only, saved with the project
+
     static juce::AudioProcessorValueTreeState::ParameterLayout createLayout();
 
 private:
