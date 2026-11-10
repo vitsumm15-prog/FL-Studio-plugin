@@ -89,6 +89,32 @@ private:
     bool dragOver = false;
 };
 
+// Floating CRT window with a user image that hops on each note; drag it anywhere in the editor.
+class AvatarWindow : public juce::Component, private juce::Timer
+{
+public:
+    explicit AvatarWindow (ZaryaProcessor& p);
+    ~AvatarWindow() override;
+
+    void paint (juce::Graphics&) override;
+    void resized() override;
+    void mouseDown (const juce::MouseEvent&) override;
+    void mouseDrag (const juce::MouseEvent&) override;
+
+private:
+    void timerCallback() override;
+    void loadImage (const juce::File&);
+
+    ZaryaProcessor& proc;
+    juce::Image image;
+    juce::TextButton loadButton { "Load" };
+    std::unique_ptr<juce::FileChooser> chooser;
+    juce::ComponentDragger dragger;
+    juce::ComponentBoundsConstrainer constrainer;
+    int seenNotes = 0;
+    float hop = 0.0f, hopVel = 0.0f, squash = 0.0f, xPos = 0.5f, xTarget = 0.5f, tilt = 0.0f, glow = 0.0f;
+};
+
 class ZaryaEditor : public juce::AudioProcessorEditor
 {
 public:
@@ -104,6 +130,7 @@ private:
     Dashboard dashboard;
     juce::TabbedComponent tabs { juce::TabbedButtonBar::TabsAtTop };
     juce::MidiKeyboardComponent keyboard;
+    AvatarWindow avatar;
     juce::Rectangle<int> keyboardPlate;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (ZaryaEditor)

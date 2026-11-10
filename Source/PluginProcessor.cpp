@@ -69,7 +69,13 @@ void ZaryaProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiB
         const auto& m = meta.getMessage();
         MidiEvent e;
         e.sample = juce::jlimit (0, numSamples - 1, meta.samplePosition);
-        if (m.isNoteOn())                     { e.type = MidiEvent::NoteOn;  e.note = m.getNoteNumber(); e.value = m.getFloatVelocity(); }
+        if (m.isNoteOn())
+        {
+            e.type = MidiEvent::NoteOn; e.note = m.getNoteNumber(); e.value = m.getFloatVelocity();
+            lastNote.store (e.note, std::memory_order_relaxed);
+            lastVelocity.store (e.value, std::memory_order_relaxed);
+            noteOnCount.fetch_add (1, std::memory_order_release);
+        }
         else if (m.isNoteOff())               { e.type = MidiEvent::NoteOff; e.note = m.getNoteNumber(); }
         else if (m.isPitchWheel())            { e.type = MidiEvent::PitchBend; e.value = (float) (m.getPitchWheelValue() - 8192) / 8192.0f; }
         else if (m.isControllerOfType (1))    { e.type = MidiEvent::ModWheel; e.value = (float) m.getControllerValue() / 127.0f; }
@@ -209,6 +215,7 @@ void ZaryaProcessor::getStateInformation (juce::MemoryBlock& destData)
         const auto s = getSample (o);
         node.setProperty (samplePathKey (o), s != nullptr ? juce::String (s->path) : juce::String(), nullptr);
     }
+    node.setProperty ("avatar", avatarPath, nullptr);
     state.appendChild (node, nullptr);
     if (auto xml = state.createXml()) copyXmlToBinary (*xml, destData);
 }
@@ -226,6 +233,7 @@ void ZaryaProcessor::setStateInformation (const void* data, int sizeInBytes)
         if (path.isNotEmpty() && f.existsAsFile()) loadSample (o, f);
         else resetSampleToDefault (o);
     }
+    avatarPath = node.isValid() ? node["avatar"].toString() : juce::String();
     apvts.replaceState (state);
 }
 
