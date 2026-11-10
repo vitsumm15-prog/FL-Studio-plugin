@@ -565,6 +565,7 @@ void AvatarWindow::timerCallback()
     hopVel -= 9.0f * dt;
     hop += hopVel * dt * 3.0f;
     if (hop <= 0.0f) { if (hopVel < -0.5f) squash = 0.18f; hop = 0.0f; hopVel = 0.0f; }
+    if (hop > 1.0f) { hop = 1.0f; hopVel = std::min (hopVel, 0.0f); } // fast notes re-launch mid-air; stay inside the screen
     squash *= 0.85f;
     tilt *= 0.9f;
     xPos += (xTarget - xPos) * 0.12f;
