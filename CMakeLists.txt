@@ -5,6 +5,9 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
+# Static MSVC runtime: the installed plugin does not need the VC++ redistributable.
+set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+
 option(ZARYA_BUILD_TESTS "Build the offline DSP test executable" ON)
 
 # JUCE: a local copy in ./JUCE is used if present, otherwise JUCE 8 is downloaded.

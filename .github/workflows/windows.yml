@@ -1,0 +1,45 @@
+name: Windows build
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  windows:
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure
+        run: cmake -B build -G "Visual Studio 17 2022" -A x64
+
+      - name: Build
+        run: cmake --build build --config Release --parallel
+
+      - name: DSP test
+        working-directory: build
+        run: .\Release\ZaryaEngineTest.exe
+
+      - name: Installer
+        shell: pwsh
+        run: |
+          if (-not (Test-Path "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe")) { choco install innosetup -y --no-progress }
+          & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" installer\Zarya.iss
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Portable zip
+        shell: pwsh
+        run: |
+          $out = "dist\portable"
+          New-Item -ItemType Directory -Force $out | Out-Null
+          Copy-Item -Recurse build\Zarya_artefacts\Release\VST3\Zarya.vst3 $out
+          Copy-Item build\Zarya_artefacts\Release\Standalone\Zarya.exe $out
+          Compress-Archive -Path "$out\*" -DestinationPath dist\Zarya-0.9.0-Windows-x64-Portable.zip
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Zarya-Windows-x64
+          path: |
+            dist/*.exe
+            dist/*.zip
