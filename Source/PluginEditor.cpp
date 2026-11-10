@@ -3,14 +3,9 @@
 
 namespace
 {
-constexpr int kCellW = 84, kCellH = 96, kTitleH = 22, kSampleViewH = 104;
-const juce::Colour kPanel (0xff1b2130), kAccent (0xffffa64d), kText (0xffdde3ee);
+constexpr int kCellW = 84, kCellH = 100, kTitleH = 30, kSampleViewH = 112;
 const char* kAudioWildcard = "*.wav;*.aif;*.aiff;*.flac;*.ogg;*.mp3";
-
-juce::Font font (float h, bool bold = false)
-{
-    return juce::Font (juce::FontOptions (h, bold ? juce::Font::bold : juce::Font::plain));
-}
+namespace col = retro::colours;
 
 int itemHeight (juce::Component& c, int width)
 {
@@ -102,8 +97,8 @@ ParamGroup::ParamGroup (ZaryaProcessor& p, const juce::String& t, const juce::St
         if (strip.isNotEmpty() && name.startsWith (strip)) name = name.substring (strip.length());
         c.label = std::make_unique<juce::Label> (juce::String(), name);
         c.label->setJustificationType (juce::Justification::centred);
-        c.label->setFont (font (12.0f));
-        c.label->setColour (juce::Label::textColourId, kText);
+        c.label->setFont (retro::sans (11.5f));
+        c.label->setColour (juce::Label::textColourId, col::engraved);
         addAndMakeVisible (*c.label);
 
         if (auto* choice = dynamic_cast<juce::AudioParameterChoice*> (rp))
@@ -122,8 +117,10 @@ ParamGroup::ParamGroup (ZaryaProcessor& p, const juce::String& t, const juce::St
         else
         {
             auto s = std::make_unique<juce::Slider> (juce::Slider::RotaryHorizontalVerticalDrag, juce::Slider::TextBoxBelow);
-            s->setTextBoxStyle (juce::Slider::TextBoxBelow, false, 74, 16);
-            s->setColour (juce::Slider::rotarySliderFillColourId, kAccent);
+            s->setTextBoxStyle (juce::Slider::TextBoxBelow, false, 70, 17);
+            s->setColour (juce::Slider::textBoxTextColourId, col::phosphor);
+            s->setColour (juce::Slider::textBoxBackgroundColourId, col::screen);
+            s->setColour (juce::Slider::textBoxOutlineColourId, juce::Colour (0xff6f6c60));
             c.sliderAttachment = std::make_unique<APVTS::SliderAttachment> (p.apvts, pid, *s);
             c.isSlider = true;
             c.comp = std::move (s);
@@ -136,32 +133,31 @@ ParamGroup::ParamGroup (ZaryaProcessor& p, const juce::String& t, const juce::St
 int ParamGroup::columnsFor (int width) const
 {
     if (forcedColumns > 0) return forcedColumns;
-    return juce::jlimit (1, std::max (1, (int) controls.size()), (width - 12) / kCellW);
+    return juce::jlimit (1, std::max (1, (int) controls.size()), (width - 20) / kCellW);
 }
 
 int ParamGroup::getHeightForWidth (int width) const
 {
     const int cols = columnsFor (width);
     const int rows = ((int) controls.size() + cols - 1) / cols;
-    return kTitleH + rows * kCellH + 12;
+    return kTitleH + rows * kCellH + 16;
 }
 
 void ParamGroup::paint (juce::Graphics& g)
 {
-    auto r = getLocalBounds().toFloat().reduced (2.0f);
-    g.setColour (kPanel);
-    g.fillRoundedRectangle (r, 6.0f);
-    g.setColour (kAccent.withAlpha (0.35f));
-    g.drawRoundedRectangle (r, 6.0f, 1.0f);
-    g.setColour (kAccent);
-    g.setFont (font (14.0f, true));
-    g.drawText (title, getLocalBounds().reduced (10, 4).removeFromTop (kTitleH - 4), juce::Justification::centredLeft);
+    retro::drawPlate (g, getLocalBounds().toFloat().reduced (3.0f, 3.0f).withTrimmedBottom (2.0f));
+    const auto f = retro::mono (13.0f);
+    const float tw = juce::GlyphArrangement::getStringWidth (f, title.toUpperCase()) + 20.0f;
+    auto tag = retro::drawScreen (g, { 18.0f, 8.0f, tw, 20.0f }, 2.0f);
+    g.setFont (f);
+    g.setColour (col::cyan);
+    g.drawText (title.toUpperCase(), tag, juce::Justification::centred);
 }
 
 void ParamGroup::resized()
 {
-    auto area = getLocalBounds().reduced (6);
-    area.removeFromTop (kTitleH - 4);
+    auto area = getLocalBounds().reduced (10, 6);
+    area.removeFromTop (kTitleH - 6);
     const int cols = columnsFor (getWidth());
     const int cw = forcedColumns > 0 ? area.getWidth() / cols : kCellW;
     for (int i = 0; i < (int) controls.size(); ++i)
@@ -224,55 +220,303 @@ void SampleView::filesDropped (const juce::StringArray& files, int, int)
 
 void SampleView::resized()
 {
-    auto r = getLocalBounds().reduced (8);
-    auto buttons = r.removeFromRight (130);
-    loadButton.setBounds (buttons.removeFromTop (28));
+    auto r = getLocalBounds().reduced (16, 14);
+    auto buttons = r.removeFromRight (132);
+    loadButton.setBounds (buttons.removeFromTop (38));
     buttons.removeFromTop (6);
-    resetButton.setBounds (buttons.removeFromTop (28));
+    resetButton.setBounds (buttons.removeFromTop (38));
 }
 
 void SampleView::paint (juce::Graphics& g)
 {
-    auto r = getLocalBounds().toFloat().reduced (2.0f);
-    g.setColour (kPanel.darker (0.3f));
-    g.fillRoundedRectangle (r, 6.0f);
-    g.setColour (dragOver ? kAccent : kAccent.withAlpha (0.25f));
-    g.drawRoundedRectangle (r, 6.0f, dragOver ? 2.0f : 1.0f);
+    retro::drawPlate (g, getLocalBounds().toFloat().reduced (3.0f, 3.0f).withTrimmedBottom (2.0f));
+    auto screen = retro::drawScreen (g, getLocalBounds().reduced (16, 12).withTrimmedRight (146).toFloat());
+    if (dragOver)
+    {
+        g.setColour (col::phosphor);
+        g.drawRoundedRectangle (screen, 3.0f, 2.0f);
+    }
 
-    auto wave = getLocalBounds().reduced (10).withTrimmedRight (140);
-    auto caption = wave.removeFromTop (16);
-    g.setFont (font (12.0f));
-    g.setColour (kText);
-    juce::String text = "Osc " + juce::String (osc + 1) + " sample: ";
-    text += current != nullptr ? juce::String::fromUTF8 (current->name.c_str()) : juce::String ("none");
+    auto inner = screen.reduced (8.0f, 4.0f);
+    auto caption = inner.removeFromTop (16.0f);
+    g.setFont (retro::mono (12.0f));
+    g.setColour (col::cyan);
+    juce::String text = "OSC" + juce::String (osc + 1) + " SAMPLE> ";
+    text += current != nullptr ? juce::String::fromUTF8 (current->name.c_str()) : juce::String ("NONE");
     if (current != nullptr && current->sampleRate > 0.0)
-        text += juce::String::formatted ("  (%.2f s)", (double) current->length() / current->sampleRate);
+        text += juce::String::formatted ("  [%.2fs]", (double) current->length() / current->sampleRate);
     g.drawText (text, caption, juce::Justification::centredLeft);
     if (status.isNotEmpty())
     {
-        g.setColour (juce::Colours::orangered);
+        g.setColour (col::red);
         g.drawText (status, caption, juce::Justification::centredRight);
     }
 
-    if (current == nullptr || wave.getWidth() <= 0) return;
-    g.setColour (kAccent.withAlpha (0.85f));
-    const float mid = (float) wave.getCentreY(), half = (float) wave.getHeight() * 0.5f;
-    const int n = (int) current->overviewMin.size();
-    for (int x = 0; x < wave.getWidth(); ++x)
+    if (current != nullptr && inner.getWidth() > 0)
     {
-        const int b = juce::jlimit (0, n - 1, x * n / wave.getWidth());
-        const float y0 = mid - current->overviewMax[(size_t) b] * half;
-        const float y1 = mid - current->overviewMin[(size_t) b] * half;
-        g.drawVerticalLine (wave.getX() + x, std::min (y0, y1), std::max (y0, y1) + 1.0f);
+        const int n = (int) current->overviewMin.size();
+        const float mid = inner.getCentreY(), half = inner.getHeight() * 0.5f;
+        const int x0 = (int) inner.getX(), w = (int) inner.getWidth();
+        g.setColour (col::phosphor.withAlpha (0.12f));
+        g.drawHorizontalLine ((int) mid, inner.getX(), inner.getRight());
+        g.setColour (col::phosphor.withAlpha (0.85f));
+        for (int x = 0; x < w && n > 0; ++x)
+        {
+            const int b = juce::jlimit (0, n - 1, x * n / w);
+            const float y0 = mid - current->overviewMax[(size_t) b] * half;
+            const float y1 = mid - current->overviewMin[(size_t) b] * half;
+            g.drawVerticalLine (x0 + x, std::min (y0, y1), std::max (y0, y1) + 1.0f);
+        }
     }
+    retro::drawScanlines (g, screen);
+}
+
+//==============================================================================
+Dashboard::Dashboard (ZaryaProcessor& p) : proc (p)
+{
+    setOpaque (false);
+    startTimerHz (30);
+}
+
+Dashboard::~Dashboard() { stopTimer(); }
+
+void Dashboard::resized()
+{
+    auto r = getLocalBounds().toFloat().reduced (18.0f, 14.0f);
+    auto right = r.removeFromRight (236.0f);
+    logoArea = right.removeFromTop (r.getHeight() * 0.58f);
+    right.removeFromTop (8.0f);
+    counterArea = right;
+    r.removeFromRight (10.0f);
+    meterArea = r.removeFromRight (42.0f);
+    r.removeFromRight (10.0f);
+    lfoArea = r.removeFromRight (std::min (220.0f, r.getWidth() * 0.32f));
+    r.removeFromRight (10.0f);
+    scopeArea = r;
+}
+
+void Dashboard::timerCallback()
+{
+    // Trigger on a rising zero crossing so periodic waves stand still on screen.
+    const int end = proc.scopeWrite.load (std::memory_order_acquire);
+    constexpr int size = ZaryaProcessor::kScopeSize, mask = size - 1, search = 2048;
+    int start = (end - kScopeLen) & mask;
+    for (int back = kScopeLen; back < kScopeLen + search; ++back)
+    {
+        const int i = (end - back) & mask;
+        const float a = proc.scope[(i - 1) & mask].load (std::memory_order_relaxed);
+        const float b = proc.scope[i].load (std::memory_order_relaxed);
+        if (a < 0.0f && b >= 0.0f) { start = i; break; }
+    }
+    for (int i = 0; i < kScopeLen; ++i)
+        scopeData[i] = proc.scope[(start + i) & mask].load (std::memory_order_relaxed);
+
+    for (int l = 0; l < zarya::kNumLfo; ++l)
+        lfoHistory[l][lfoPos] = proc.lfoDisplay[l].load (std::memory_order_relaxed);
+    lfoPos = (lfoPos + 1) % kLfoHistory;
+
+    const float peak = proc.outputPeak.exchange (0.0f, std::memory_order_relaxed);
+    level = std::max (peak, level * 0.85f);
+    if (level >= peakHold) { peakHold = level; peakHoldFrames = 30; }
+    else if (--peakHoldFrames < 0) peakHold *= 0.92f;
+    voices = proc.activeVoices.load (std::memory_order_relaxed);
+    repaint();
+}
+
+void Dashboard::paint (juce::Graphics& g)
+{
+    retro::drawPlate (g, getLocalBounds().toFloat().reduced (3.0f, 3.0f));
+    paintScope (g, scopeArea);
+    paintLfos (g, lfoArea);
+    paintMeter (g, meterArea);
+    paintLogo (g, logoArea);
+    paintCounter (g, counterArea);
+}
+
+void Dashboard::paintScope (juce::Graphics& g, juce::Rectangle<float> area)
+{
+    // Light bezel around the CRT, as on bench oscilloscopes.
+    g.setColour (juce::Colours::black.withAlpha (0.4f));
+    g.fillRoundedRectangle (area.translated (1.0f, 2.0f), 10.0f);
+    g.setGradientFill (juce::ColourGradient (col::metalLite, area.getX(), area.getY(), col::metalDark.darker (0.2f), area.getX(), area.getBottom(), false));
+    g.fillRoundedRectangle (area, 10.0f);
+    auto tube = area.reduced (9.0f);
+    g.setColour (juce::Colour (0xff0b1712));
+    g.fillRoundedRectangle (tube, 14.0f);
+    juce::ColourGradient glass (juce::Colour (0xff10261b), tube.getCentreX(), tube.getCentreY(),
+                                juce::Colour (0xff030805), tube.getX(), tube.getY(), true);
+    g.setGradientFill (glass);
+    g.fillRoundedRectangle (tube, 14.0f);
+
+    auto plot = tube.reduced (12.0f, 10.0f);
+    g.setColour (col::phosphor.withAlpha (0.1f));
+    for (int i = 1; i < 10; ++i)
+        g.drawVerticalLine ((int) (plot.getX() + plot.getWidth() * (float) i / 10.0f), plot.getY(), plot.getBottom());
+    for (int i = 1; i < 8; ++i)
+        g.drawHorizontalLine ((int) (plot.getY() + plot.getHeight() * (float) i / 8.0f), plot.getX(), plot.getRight());
+    g.setColour (col::phosphor.withAlpha (0.22f));
+    g.drawHorizontalLine ((int) plot.getCentreY(), plot.getX(), plot.getRight());
+    g.drawVerticalLine ((int) plot.getCentreX(), plot.getY(), plot.getBottom());
+    for (int i = 0; i <= 50; ++i)
+    {
+        const float x = plot.getX() + plot.getWidth() * (float) i / 50.0f;
+        g.drawVerticalLine ((int) x, plot.getCentreY() - (i % 5 == 0 ? 4.0f : 2.0f), plot.getCentreY() + (i % 5 == 0 ? 4.0f : 2.0f));
+    }
+
+    juce::Path trace;
+    const float half = plot.getHeight() * 0.46f;
+    for (int i = 0; i < kScopeLen; ++i)
+    {
+        const float x = plot.getX() + plot.getWidth() * (float) i / (float) (kScopeLen - 1);
+        const float y = plot.getCentreY() - juce::jlimit (-1.08f, 1.08f, scopeData[i]) * half;
+        if (i == 0) trace.startNewSubPath (x, y);
+        else trace.lineTo (x, y);
+    }
+    // Phosphor glow: wide faint strokes under a sharp bright core.
+    g.setColour (col::phosphor.withAlpha (0.08f));
+    g.strokePath (trace, juce::PathStrokeType (9.0f, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
+    g.setColour (col::phosphor.withAlpha (0.22f));
+    g.strokePath (trace, juce::PathStrokeType (4.0f, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
+    g.setColour (col::phosphor.brighter (0.4f));
+    g.strokePath (trace, juce::PathStrokeType (1.6f, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
+
+    g.setFont (retro::mono (11.0f));
+    g.setColour (col::phosphor.withAlpha (0.8f));
+    g.drawText ("CH1 OUT  0.5V/DIV", plot.removeFromTop (14.0f), juce::Justification::topLeft);
+    g.drawText ("TRIG+ AUTO", plot.removeFromBottom (14.0f), juce::Justification::bottomRight);
+
+    retro::drawScanlines (g, tube);
+    g.setColour (juce::Colours::white.withAlpha (0.025f));
+    g.fillEllipse (tube.withTrimmedBottom (tube.getHeight() * 0.55f).reduced (tube.getWidth() * 0.12f, 0.0f).translated (0.0f, 4.0f));
+}
+
+void Dashboard::paintLfos (juce::Graphics& g, juce::Rectangle<float> area)
+{
+    auto screen = retro::drawScreen (g, area);
+    const juce::Colour traceCol[zarya::kNumLfo] = { col::phosphor, col::red, juce::Colour (0xffffe14a), col::cyan };
+    const float rowH = screen.getHeight() / (float) zarya::kNumLfo;
+    for (int l = 0; l < zarya::kNumLfo; ++l)
+    {
+        auto row = juce::Rectangle<float> (screen.getX(), screen.getY() + rowH * (float) l, screen.getWidth(), rowH).reduced (5.0f, 3.0f);
+        g.setColour (juce::Colours::white.withAlpha (0.25f));
+        g.drawRect (row, 1.0f);
+        auto label = row.removeFromTop (12.0f);
+        g.setFont (retro::mono (10.0f));
+        g.setColour (juce::Colours::white.withAlpha (0.85f));
+        g.drawText ("Wave(LFO" + juce::String (l + 1) + ")", label.translated (3.0f, 0.0f), juce::Justification::centredLeft);
+
+        auto plot = row.reduced (3.0f, 2.0f);
+        juce::Path p;
+        for (int i = 0; i < kLfoHistory; ++i)
+        {
+            const float v = juce::jlimit (-1.0f, 1.0f, lfoHistory[l][(lfoPos + i) % kLfoHistory]);
+            const float x = plot.getX() + plot.getWidth() * (float) i / (float) (kLfoHistory - 1);
+            const float y = plot.getCentreY() - v * plot.getHeight() * 0.5f;
+            if (i == 0) p.startNewSubPath (x, y);
+            else p.lineTo (x, y);
+        }
+        g.setColour (traceCol[l].withAlpha (0.25f));
+        g.strokePath (p, juce::PathStrokeType (3.5f));
+        g.setColour (traceCol[l]);
+        g.strokePath (p, juce::PathStrokeType (1.4f));
+    }
+    retro::drawScanlines (g, screen);
+}
+
+void Dashboard::paintMeter (juce::Graphics& g, juce::Rectangle<float> area)
+{
+    auto screen = retro::drawScreen (g, area);
+    auto label = screen.removeFromBottom (14.0f);
+    g.setFont (retro::mono (9.0f));
+    g.setColour (col::cyan);
+    g.drawText ("LEVEL", label, juce::Justification::centred);
+
+    constexpr int segs = 24;
+    auto bars = screen.reduced (6.0f, 5.0f);
+    const float segH = bars.getHeight() / (float) segs;
+    const auto toNorm = [] (float x) { return juce::jlimit (0.0f, 1.0f, (juce::Decibels::gainToDecibels (x, -48.0f) + 48.0f) / 48.0f); };
+    const int lit = (int) std::round (toNorm (level) * segs);
+    const int hold = (int) std::round (toNorm (peakHold) * segs);
+    for (int i = 0; i < segs; ++i)
+    {
+        const auto c = i >= segs - 3 ? col::red : i >= segs - 8 ? juce::Colour (0xffffd84a) : juce::Colour (0xff3fa8ff);
+        auto seg = juce::Rectangle<float> (bars.getX(), bars.getBottom() - segH * (float) (i + 1), bars.getWidth(), segH).reduced (0.0f, 1.0f);
+        const bool on = i < lit || i == hold - 1;
+        g.setColour (on ? c : c.withAlpha (0.12f));
+        g.fillRect (seg);
+    }
+    retro::drawScanlines (g, area.reduced (3.0f));
+}
+
+void Dashboard::paintLogo (juce::Graphics& g, juce::Rectangle<float> area)
+{
+    auto screen = retro::drawScreen (g, area).reduced (10.0f, 6.0f);
+    auto big = screen.removeFromTop (screen.getHeight() * 0.55f);
+    g.setFont (retro::mono (big.getHeight() * 0.62f));
+    g.setColour (juce::Colours::white);
+    g.drawText ("ZARYA", big.removeFromTop (big.getHeight() * 0.62f), juce::Justification::centredLeft);
+    g.setFont (retro::mono (big.getHeight() * 0.85f));
+    g.setColour (col::cyan);
+    g.drawText ("OS v.9", big, juce::Justification::centredLeft);
+
+    g.setFont (retro::mono (10.0f, false));
+    g.setColour (juce::Colours::white.withAlpha (0.8f));
+    const char* lines[] = { "The ZARYA AUDIO", "DSP-Machine Series 3F", "Zarya OS v0.9.1  WT/SMP/GRN" };
+    const float lh = screen.getHeight() / 3.0f;
+    for (auto* line : lines)
+        g.drawText (line, screen.removeFromTop (lh), juce::Justification::centredLeft);
+    retro::drawScanlines (g, area.reduced (3.0f));
+}
+
+void Dashboard::paintCounter (juce::Graphics& g, juce::Rectangle<float> area)
+{
+    auto digitsRow = area.removeFromTop (area.getHeight() * 0.52f);
+    const juce::String digits = juce::String (juce::jlimit (0, 99, voices)).paddedLeft ('0', 2);
+    const float boxW = digitsRow.getHeight() * 0.72f;
+
+    g.setFont (retro::sans (11.0f));
+    g.setColour (col::engraved);
+    g.drawFittedText ("VOICES", digitsRow.removeFromLeft (56.0f).toNearestInt(), juce::Justification::centred, 1);
+
+    const auto drawDigit = [&] (juce::Rectangle<float> box, const juce::String& d)
+    {
+        auto inner = retro::drawScreen (g, box, 3.0f);
+        g.setColour (juce::Colour (0xff1c0e04));
+        g.fillRoundedRectangle (inner, 2.0f);
+        g.setFont (retro::mono (inner.getHeight() * 0.85f));
+        g.setColour (col::amber.withAlpha (0.12f));
+        g.drawText ("8", inner, juce::Justification::centred);
+        g.setColour (col::amber.withAlpha (0.3f));
+        g.drawText (d, inner.translated (0.0f, 1.0f).expanded (1.0f), juce::Justification::centred);
+        g.setColour (col::amber);
+        g.drawText (d, inner, juce::Justification::centred);
+    };
+    for (int i = 0; i < 2; ++i)
+        drawDigit (digitsRow.removeFromLeft (boxW + 6.0f).withTrimmedRight (6.0f), digits.substring (i, i + 1));
+
+    digitsRow.removeFromLeft (4.0f);
+    const auto dbText = level > 1.0e-4f ? juce::String (juce::roundToInt (juce::Decibels::gainToDecibels (level))) : juce::String ("--");
+    auto dbScreen = retro::drawScreen (g, digitsRow.reduced (0.0f, digitsRow.getHeight() * 0.18f), 3.0f);
+    g.setFont (retro::mono (16.0f));
+    g.setColour (col::amber);
+    g.drawText (dbText + "dB", dbScreen, juce::Justification::centred);
+
+    area.removeFromTop (6.0f);
+    auto lcd = retro::drawScreen (g, area, 3.0f);
+    const int hashes = juce::jlimit (0, 16, voices);
+    juce::String line;
+    for (int i = 0; i < 16; ++i) line << (i < hashes ? "#" : ".");
+    g.setFont (retro::mono (juce::jlimit (10.0f, 13.0f, lcd.getHeight() * 0.42f)));
+    g.setColour (col::cyan);
+    g.drawText (line, lcd.removeFromTop (lcd.getHeight() * 0.5f).reduced (8.0f, 0.0f), juce::Justification::centredLeft);
+    g.drawText (voices > 0 ? "PLAY::ON" : "LOAD::OK", lcd.reduced (8.0f, 0.0f), juce::Justification::centredLeft);
 }
 
 //==============================================================================
 ZaryaEditor::ZaryaEditor (ZaryaProcessor& p)
-    : AudioProcessorEditor (&p), proc (p),
+    : AudioProcessorEditor (&p), proc (p), dashboard (p),
       keyboard (p.keyboardState, juce::MidiKeyboardComponent::horizontalKeyboard)
 {
-    lnf.setColourScheme (juce::LookAndFeel_V4::getMidnightColourScheme());
     setLookAndFeel (&lnf);
     using SA = juce::StringArray;
     auto group = [&p] (const juce::String& title, const SA& prefixes, const juce::String& strip, int cols = 0)
@@ -307,55 +551,51 @@ ZaryaEditor::ZaryaEditor (ZaryaProcessor& p)
     fx->addRow().add (group ("Distortion", SA ("fx_dist_"), "Dist ")).add (group ("Chorus", SA ("fx_chorus_"), "Chorus "));
     fx->addRow().add (group ("Delay", SA ("fx_delay_"), "Delay ")).add (group ("Reverb", SA ("fx_reverb_"), "Reverb "));
 
-    const auto tabBg = juce::Colour (0xff121722);
-    tabs.addTab ("Oscillators", tabBg, osc, true);
-    tabs.addTab ("Filter / Envelopes", tabBg, filterEnv, true);
-    tabs.addTab ("LFO / Mod Matrix", tabBg, mod, true);
-    tabs.addTab ("Arp / Voice", tabBg, play, true);
-    tabs.addTab ("Effects", tabBg, fx, true);
-    tabs.setTabBarDepth (30);
+    const auto tabBg = col::chassis;
+    tabs.addTab ("OSC", tabBg, osc, true);
+    tabs.addTab ("FILTER / ENV", tabBg, filterEnv, true);
+    tabs.addTab ("LFO / MATRIX", tabBg, mod, true);
+    tabs.addTab ("ARP / VOICE", tabBg, play, true);
+    tabs.addTab ("FX", tabBg, fx, true);
+    tabs.setTabBarDepth (42);
+    tabs.setOutline (0);
+    tabs.setIndent (0);
     addAndMakeVisible (tabs);
+
+    addAndMakeVisible (dashboard);
 
     keyboard.setAvailableRange (21, 108);
     keyboard.setLowestVisibleKey (36);
+    keyboard.setKeyWidth (22.0f);
     addAndMakeVisible (keyboard);
 
-    header.setText ("ZARYA", juce::dontSendNotification);
-    header.setFont (font (20.0f, true));
-    header.setColour (juce::Label::textColourId, kAccent);
-    addAndMakeVisible (header);
-    status.setJustificationType (juce::Justification::centredRight);
-    status.setColour (juce::Label::textColourId, kText);
-    addAndMakeVisible (status);
-
     setResizable (true, true);
-    setResizeLimits (760, 520, 2000, 1500);
-    setSize (1060, 780);
-    startTimerHz (10);
+    setResizeLimits (940, 720, 2200, 1600);
+    setSize (1140, 900);
 }
 
-ZaryaEditor::~ZaryaEditor()
+ZaryaEditor::~ZaryaEditor() { setLookAndFeel (nullptr); }
+
+void ZaryaEditor::paint (juce::Graphics& g)
 {
-    stopTimer();
-    setLookAndFeel (nullptr);
-}
+    g.fillAll (col::chassis);
+    // Faint diagonal hatching gives the dark chassis a cast-metal texture.
+    g.setColour (juce::Colours::black.withAlpha (0.08f));
+    for (int x = -getHeight(); x < getWidth(); x += 6)
+        g.drawLine ((float) x, 0.0f, (float) (x + getHeight()), (float) getHeight(), 1.0f);
 
-void ZaryaEditor::timerCallback()
-{
-    juce::String s = "Voices: " + juce::String (proc.activeVoices.load());
-    for (int l = 0; l < zarya::kNumLfo; ++l)
-        s += "   LFO" + juce::String (l + 1) + " " + juce::String (proc.lfoDisplay[l].load(), 2);
-    status.setText (s, juce::dontSendNotification);
+    retro::drawPlate (g, keyboardPlate.toFloat());
+    g.setColour (juce::Colours::black.withAlpha (0.7f));
+    g.fillRect (keyboard.getBounds().expanded (3).toFloat());
 }
-
-void ZaryaEditor::paint (juce::Graphics& g) { g.fillAll (juce::Colour (0xff0d111a)); }
 
 void ZaryaEditor::resized()
 {
-    auto r = getLocalBounds();
-    auto top = r.removeFromTop (34).reduced (10, 4);
-    header.setBounds (top.removeFromLeft (140));
-    status.setBounds (top);
-    keyboard.setBounds (r.removeFromBottom (80).reduced (6, 4));
-    tabs.setBounds (r.reduced (6, 0));
+    auto r = getLocalBounds().reduced (6);
+    dashboard.setBounds (r.removeFromTop (juce::jlimit (190, 260, getHeight() / 4)));
+    r.removeFromTop (4);
+    keyboardPlate = r.removeFromBottom (104).reduced (3);
+    keyboard.setBounds (keyboardPlate.reduced (22, 14));
+    r.removeFromBottom (4);
+    tabs.setBounds (r);
 }

@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(ZaryaSynth VERSION 0.9.0 LANGUAGES C CXX)
+project(ZaryaSynth VERSION 0.9.1 LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -31,7 +31,7 @@ set(ZARYA_DSP_SOURCES
 juce_add_plugin(Zarya
     COMPANY_NAME "Zarya Audio"
     PRODUCT_NAME "Zarya"
-    VERSION 0.9.0
+    VERSION 0.9.1
     IS_SYNTH TRUE
     NEEDS_MIDI_INPUT TRUE
     NEEDS_MIDI_OUTPUT FALSE

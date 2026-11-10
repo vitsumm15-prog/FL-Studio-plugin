@@ -44,6 +44,12 @@ public:
     std::atomic<int> activeVoices { 0 };
     std::atomic<float> lfoDisplay[zarya::kNumLfo] {};
 
+    // Oscilloscope tap: mono mix of the output, written by the audio thread, read by the editor.
+    static constexpr int kScopeSize = 8192;
+    std::atomic<float> scope[kScopeSize] {};
+    std::atomic<int> scopeWrite { 0 };
+    std::atomic<float> outputPeak { 0.0f };
+
     static juce::AudioProcessorValueTreeState::ParameterLayout createLayout();
 
 private:

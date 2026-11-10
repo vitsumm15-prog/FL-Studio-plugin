@@ -3,6 +3,36 @@
 
 #include <JuceHeader.h>
 #include "PluginProcessor.h"
+#include "RetroLookAndFeel.h"
+
+// Top instrument panel: output oscilloscope, LFO traces, level meter, logo and voice counter.
+class Dashboard : public juce::Component, private juce::Timer
+{
+public:
+    explicit Dashboard (ZaryaProcessor& p);
+    ~Dashboard() override;
+
+    void paint (juce::Graphics&) override;
+    void resized() override;
+
+private:
+    void timerCallback() override;
+    void paintScope (juce::Graphics&, juce::Rectangle<float>);
+    void paintLfos (juce::Graphics&, juce::Rectangle<float>);
+    void paintMeter (juce::Graphics&, juce::Rectangle<float>);
+    void paintLogo (juce::Graphics&, juce::Rectangle<float>);
+    void paintCounter (juce::Graphics&, juce::Rectangle<float>);
+
+    static constexpr int kScopeLen = 1024, kLfoHistory = 96;
+
+    ZaryaProcessor& proc;
+    juce::Rectangle<float> scopeArea, lfoArea, meterArea, logoArea, counterArea;
+    float scopeData[kScopeLen] {};
+    float lfoHistory[zarya::kNumLfo][kLfoHistory] {};
+    int lfoPos = 0;
+    float level = 0.0f, peakHold = 0.0f;
+    int peakHoldFrames = 0, voices = 0;
+};
 
 // A titled box with one control per parameter whose ID starts with one of the prefixes.
 class ParamGroup : public juce::Component
@@ -59,7 +89,7 @@ private:
     bool dragOver = false;
 };
 
-class ZaryaEditor : public juce::AudioProcessorEditor, private juce::Timer
+class ZaryaEditor : public juce::AudioProcessorEditor
 {
 public:
     explicit ZaryaEditor (ZaryaProcessor&);
@@ -69,13 +99,12 @@ public:
     void resized() override;
 
 private:
-    void timerCallback() override;
-
-    juce::LookAndFeel_V4 lnf;
+    retro::LookAndFeel lnf;
     ZaryaProcessor& proc;
+    Dashboard dashboard;
     juce::TabbedComponent tabs { juce::TabbedButtonBar::TabsAtTop };
     juce::MidiKeyboardComponent keyboard;
-    juce::Label header, status;
+    juce::Rectangle<int> keyboardPlate;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (ZaryaEditor)
 };

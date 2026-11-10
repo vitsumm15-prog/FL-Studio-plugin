@@ -118,6 +118,20 @@ void ZaryaProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiB
     }
     for (int ch = 2; ch < buffer.getNumChannels(); ++ch) buffer.clear (ch, 0, numSamples);
 
+    {
+        int w = scopeWrite.load (std::memory_order_relaxed);
+        float peak = 0.0f;
+        for (int i = 0; i < numSamples; ++i)
+        {
+            const float x = right != nullptr ? 0.5f * (left[i] + right[i]) : left[i];
+            peak = std::max (peak, std::abs (x));
+            scope[w].store (x, std::memory_order_relaxed);
+            w = (w + 1) & (kScopeSize - 1);
+        }
+        scopeWrite.store (w, std::memory_order_release);
+        outputPeak.store (std::max (peak, outputPeak.load (std::memory_order_relaxed)), std::memory_order_relaxed);
+    }
+
     activeVoices.store (engine.activeVoiceCount(), std::memory_order_relaxed);
     for (int l = 0; l < kNumLfo; ++l) lfoDisplay[l].store (engine.lfoValue (l), std::memory_order_relaxed);
     midi.clear();

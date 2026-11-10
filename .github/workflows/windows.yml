@@ -35,7 +35,7 @@ jobs:
           New-Item -ItemType Directory -Force $out | Out-Null
           Copy-Item -Recurse build\Zarya_artefacts\Release\VST3\Zarya.vst3 $out
           Copy-Item build\Zarya_artefacts\Release\Standalone\Zarya.exe $out
-          Compress-Archive -Path "$out\*" -DestinationPath dist\Zarya-0.9.0-Windows-x64-Portable.zip
+          Compress-Archive -Path "$out\*" -DestinationPath dist\Zarya-0.9.1-Windows-x64-Portable.zip
 
       - uses: actions/upload-artifact@v4
         with:

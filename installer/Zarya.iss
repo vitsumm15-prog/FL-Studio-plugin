@@ -1,6 +1,6 @@
 ; Inno Setup script: installs the Zarya VST3 into the shared VST3 folder and the standalone app.
 #ifndef AppVersion
-  #define AppVersion "0.9.0"
+  #define AppVersion "0.9.1"
 #endif
 #ifndef ArtefactsDir
   #define ArtefactsDir "..\build\Zarya_artefacts\Release"
