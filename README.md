@@ -29,6 +29,8 @@ Tests/EngineTest.cpp       — офлайн-рендер 8 сценариев в
 
 ## Сборка
 
+**Готовая сборка для Windows:** GitHub Actions (`.github/workflows/windows.yml`) при каждом push собирает артефакт `Zarya-Windows-x64` — установщик `Zarya-*-Setup.exe` (VST3 в `C:\Program Files\Common Files\VST3`, Standalone в `C:\Program Files\Zarya`) и портативный zip. Установщик не подписан — Windows SmartScreen попросит нажать «Подробнее → Выполнить в любом случае».
+
 Нужны CMake 3.22+, Git и компилятор C++17. JUCE 8 скачается автоматически; можно положить его копию в папку `JUCE/` рядом с `CMakeLists.txt`.
 
 **Windows (Visual Studio 2022):**
