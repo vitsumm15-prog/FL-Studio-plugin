@@ -1,0 +1,42 @@
+ZARYA SYNTH 0.9.0
+=================
+
+What it is
+----------
+Zarya is a polyphonic software synthesizer for Windows, available as a
+VST3 plugin (for your DAW) and as a standalone app.
+
+- 3 oscillators, each in Wavetable, Sample or Granular mode, with up to
+  7 unison voices
+- Filter (low-pass, high-pass, band-pass, notch) with resonance and drive
+- 4 envelopes, 4 LFOs and an 8-slot modulation matrix
+- Poly (up to 16 voices), Mono and Legato modes with glide
+- Arpeggiator synced to the host tempo
+- Effects: distortion, chorus, stereo delay and reverb
+- Load your own samples (WAV, AIFF, FLAC, OGG, MP3) by button or drag-and-drop
+
+
+Installation (Windows 10/11, 64-bit)
+------------------------------------
+1. Run Zarya-0.9.0-Windows-x64-Setup.exe.
+2. If Windows SmartScreen shows a warning, click "More info" ->
+   "Run anyway" (the installer is not code-signed yet).
+3. Choose what to install: VST3 plugin, standalone app, or both.
+4. Finish the installer.
+
+Installed to:
+- VST3 plugin:    C:\Program Files\Common Files\VST3\Zarya.vst3
+- Standalone app: C:\Program Files\Zarya\Zarya.exe (Start menu: "Zarya")
+
+Using the plugin: open your DAW, rescan plugins if needed, and add
+"Zarya" (by Zarya Audio) to an instrument track.
+
+Using the standalone app: start "Zarya" from the Start menu. Choose your
+audio output and MIDI keyboard in Options -> Audio/MIDI Settings, or play
+with the on-screen keyboard.
+
+Portable version (no installer): unzip Zarya-0.9.0-Windows-x64-Portable.zip,
+copy the Zarya.vst3 folder into C:\Program Files\Common Files\VST3, and run
+Zarya.exe directly.
+
+Uninstall: Windows Settings -> Apps -> "Zarya Synth" -> Uninstall.
